@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración — Don Rutero</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icono_esquina.svg">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <!-- Estilos de la Aplicación -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="admin-body">
+
+    <div class="app-container">
+        
+        <!-- BARRA LATERAL (SIDEBAR ADMIN) -->
+        <aside class="sidebar" style="border-color: rgba(16, 185, 129, 0.2);">
+            
+            <!-- Cabecera Admin -->
+            <div class="sidebar-header" style="border-bottom-color: rgba(16, 185, 129, 0.2);">
+                <div class="brand">
+                    <span class="brand-icon" style="color: var(--accent);">🛠️</span>
+                    <span class="brand-title" style="background: linear-gradient(135deg, #a7f3d0 0%, #10b981 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Admin Panel</span>
+                </div>
+                
+                <div id="user-badge" class="user-badge" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #a7f3d0;">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Contenido Admin -->
+            <div class="sidebar-content">
+                
+                <!-- Botón de retorno al mapa general -->
+                <button id="user-view-btn" class="btn btn-secondary">
+                    👈 Volver al Mapa de Usuario
+                </button>
+
+                <!-- Indicador visual de modo activo -->
+                <div id="admin-tool-indicator" class="admin-tool-indicator">
+                    <strong>Modo Trazado Activo</strong><br>
+                    1. Haz clics en las calles para dibujar la ruta.<br>
+                    2. Clic en las paradas del mapa para asociarlas en orden.
+                </div>
+
+                <!-- Sección Principal Admin -->
+                <div id="main-list-section" style="display: flex; flex-direction: column; gap: 20px;">
+                    
+                    <!-- Botones de Acción Global -->
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button id="btn-create-route" class="btn btn-primary" style="background: var(--primary); display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; padding: 12px;">
+                            <img src="assets/icons/ui_camion.svg" alt="" style="width: 18px; height: 18px; filter: brightness(0) invert(1);"> 🗺️ Studio de Trazado (Trazar y Crear Ruta)
+                        </button>
+                        <button id="btn-create-stop" class="btn btn-primary" style="background: var(--accent); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <img src="assets/icons/pin_parada.svg" alt="" style="width: 18px; height: 18px; filter: brightness(0) invert(1);"> Colocar Nueva Parada
+                        </button>
+                    </div>
+
+                    <!-- Listado de Gestión de Rutas -->
+                    <div>
+                        <h3 class="section-title">Gestión de Rutas</h3>
+                        <div id="route-list" class="route-list">
+                            <!-- Se renderiza con JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones del Modo Trazado Studio (Ocultas por defecto) -->
+                <div id="admin-draw-actions" style="display: none; flex-direction: column; gap: 10px;">
+                    <div style="background: rgba(31,38,135,0.05); padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 0.82rem;">
+                        <div id="studio-points-counter" style="font-weight: 800; color: var(--primary); margin-bottom: 4px;">📍 0 puntos trazados en el mapa</div>
+                        <div style="color: var(--text-muted); font-size: 0.75rem; line-height: 1.3;">Haz clics en las calles para dibujar el trayecto del camión o importa desde JSON/SQL.</div>
+                    </div>
+
+                    <!-- Herramientas JSON/SQL (Idea de Claude) -->
+                    <div style="display: flex; gap: 6px;">
+                        <button id="btn-import-json" class="btn btn-secondary" style="flex: 1; padding: 8px 4px; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                            📥 Importar JSON/SQL
+                        </button>
+                        <button id="btn-export-json" class="btn btn-secondary" style="flex: 1; padding: 8px 4px; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                            📤 Exportar JSON/SQL
+                        </button>
+                    </div>
+
+                    <button id="btn-auto-assign" class="btn btn-secondary" style="width: 100%; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.78rem; padding: 8px; color: var(--accent); border-color: rgba(99, 102, 241, 0.3);">
+                        🪄 Auto-vincular Paradas Cercanas (300m)
+                    </button>
+
+                    <div style="display: flex; gap: 6px; margin-top: 6px;">
+                        <button id="btn-undo-draw" class="btn btn-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.78rem; padding: 8px;">
+                            ↩️ Deshacer
+                        </button>
+                        <button id="btn-clear-draw" class="btn btn-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; color: #e11d48; border-color: rgba(225,29,72,0.3); font-size: 0.78rem; padding: 8px;">
+                            🗑️ Limpiar
+                        </button>
+                    </div>
+
+                    <!-- Gestor de Secuencia de Paradas -->
+                    <div style="margin-top: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color); padding: 12px;">
+                        <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-dark); margin: 0 0 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                            Secuencia de Paradas
+                            <span id="sequence-count" style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; background: #e2e8f0; padding: 2px 6px; border-radius: 12px;">0</span>
+                        </h4>
+                        <div id="stop-sequence-list" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;">
+                            <div style="text-align:center; color:var(--text-muted); font-size:0.75rem; padding: 12px 0; font-style: italic;">No hay paradas vinculadas.</div>
+                        </div>
+                    </div>
+                    
+                    <button id="btn-save-draw" class="btn btn-primary" style="background: var(--accent); font-weight: 800; padding: 12px; margin-top: 4px; box-shadow: 0 4px 14px rgba(255, 75, 43, 0.25); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        🚀 Finalizar: Datos y Mandar a BD ➔
+                    </button>
+                    <button id="btn-cancel-draw" class="btn btn-danger" style="padding: 8px; font-size: 0.8rem;">
+                        ✕ Cancelar / Salir del Studio
+                    </button>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- MAPA FULLSCREEN -->
+        <main class="map-container">
+            <div id="map"></div>
+        </main>
+
+    </div>
+
+    <!-- -----------------------------------------------------
+         MODALES DE EDICIÓN DE DATOS (RUTAS Y PARADAS)
+         ----------------------------------------------------- -->
+
+    <!-- Modal para Crear/Editar Ruta -->
+    <div id="route-modal" class="form-overlay" style="display: none;">
+        <div class="form-card">
+            <button id="route-modal-close" class="form-close">✕</button>
+            <h2 id="route-modal-title" style="font-size: 1.6rem; font-weight: 800; color: var(--primary);">Crear Nueva Ruta</h2>
+            
+            <form id="route-form" style="display: flex; flex-direction: column; gap: 16px;">
+                <input type="hidden" id="route-form-id">
+                
+                <div class="form-group">
+                    <label for="route-name-input">Nombre de la Ruta</label>
+                    <input type="text" id="route-name-input" class="form-control" placeholder="Ej. Sábalo Centro" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="route-desc-input">Descripción / Recorrido</label>
+                    <textarea id="route-desc-input" class="form-control" rows="3" placeholder="Describe brevemente por dónde pasa esta ruta..." required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="route-color-input">Color de la Ruta (Línea del Mapa)</label>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <input type="color" id="route-color-input" class="form-control" style="width: 60px; height: 42px; padding: 4px; cursor: pointer;" value="#ff4b2b">
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">Selecciona un color distintivo</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="route-price-input">Tarifa ($ MXN)</label>
+                        <input type="number" step="0.5" id="route-price-input" class="form-control" placeholder="13.00" value="13.0">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="route-freq-input">Frecuencia (min)</label>
+                        <input type="number" id="route-freq-input" class="form-control" placeholder="10" value="10">
+                    </div>
+                </div>
+
+                <div class="form-group" style="flex-direction: row; gap: 10px; align-items: center; margin-top: 5px;">
+                    <input type="checkbox" id="route-active-input" style="width: 18px; height: 18px; cursor: pointer;" checked>
+                    <label for="route-active-input" style="cursor: pointer; font-size: 0.95rem;">Ruta Activa (Pública)</label>
+                </div>
+                
+                <button type="button" id="btn-edit-route-studio" class="btn btn-secondary" style="background: var(--bg-surface); border: 2px dashed var(--primary); color: var(--primary); font-weight: 800; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                    🗺️ Modificar Trazado en el Mapa (Studio GPS) ➔
+                </button>
+
+                <button type="submit" class="btn btn-primary" style="background: var(--accent); font-weight: 800; padding: 12px;">💾 Guardar Ruta en Base de Datos</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Crear Parada Física -->
+    <div id="stop-modal" class="form-overlay" style="display: none;">
+        <div class="form-card">
+            <button id="stop-modal-close" class="form-close">✕</button>
+            <h2 style="font-size: 1.6rem; font-weight: 800; color: var(--accent);">Crear Nueva Parada Física</h2>
+            
+            <form id="stop-form" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="form-group">
+                    <label for="stop-name">Nombre de la Parada / Referencia</label>
+                    <input type="text" id="stop-name" class="form-control" placeholder="Ej. Soriana El Conchi" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="stop-latitude">Latitud</label>
+                    <input type="text" id="stop-latitude" class="form-control" readonly required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="stop-longitude">Longitud</label>
+                    <input type="text" id="stop-longitude" class="form-control" readonly required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="background: var(--accent);">Crear Parada</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Importar JSON / SQL (Herramienta estilo Claude) -->
+    <div id="import-modal" class="form-overlay" style="display: none;">
+        <div class="form-card" style="max-width: 520px;">
+            <button id="import-modal-close" class="form-close">✕</button>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(0, 92, 151, 0.12); display: flex; align-items: center; justify-content: center;">
+                    <img src="assets/icons/ui_camion.svg" alt="" style="width: 20px; height: 20px;">
+                </div>
+                <div>
+                    <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--primary); margin: 0;">Importar Trazado (JSON / SQL)</h2>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Pega los puntos de Claude o de otra herramienta para dibujarlos</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="import-textarea" style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary);">Código JSON o sentencias SQL:</label>
+                <textarea id="import-textarea" class="form-control" rows="8" placeholder='Ejemplo JSON: [{"lat": 23.2312, "lng": -106.4123}, ...]
+O sentencias SQL: INSERT INTO route_coordinates... VALUES (1, 23.2312, -106.4123, 1);' style="font-family: monospace; font-size: 0.8rem; line-height: 1.4;"></textarea>
+            </div>
+            <button id="btn-process-import" class="btn btn-primary" style="width: 100%; margin-top: 8px; background: var(--primary);">⚡ Procesar y Dibujar en Mapa ➔</button>
+        </div>
+    </div>
+
+    <!-- Modal para Exportar JSON / SQL -->
+    <div id="export-modal" class="form-overlay" style="display: none;">
+        <div class="form-card" style="max-width: 560px;">
+            <button id="export-modal-close" class="form-close">✕</button>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--primary); margin-bottom: 4px;">Exportar Trazado Generado</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">Coordenadas y sentencias SQL generadas para esta ruta</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="font-size: 0.82rem; font-weight: 700;">Formato JSON:</label>
+                        <button id="copy-json-btn" class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.75rem;">📋 Copiar JSON</button>
+                    </div>
+                    <textarea id="export-json-text" class="form-control" rows="4" readonly style="font-family: monospace; font-size: 0.75rem; background: #f8fafc;"></textarea>
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="font-size: 0.82rem; font-weight: 700;">Formato SQL (INSERT INTO):</label>
+                        <button id="copy-sql-btn" class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.75rem;">📋 Copiar SQL</button>
+                    </div>
+                    <textarea id="export-sql-text" class="form-control" rows="5" readonly style="font-family: monospace; font-size: 0.75rem; background: #f8fafc;"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Scripts de la Aplicación -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Don Rutero — Rutas de Camiones de Mazatlán</title>
+    <meta name="description" content="Consulta las rutas de camiones y transporte público de Mazatlán, Sinaloa. Encuentra paradas, precios y frecuencias en tiempo real.">
+    <link rel="icon" type="image/svg+xml" href="assets/icono_esquina.svg">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <!-- Estilos de la Aplicación -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <div class="app-container">
+
+        <!-- ========== MAPA FULLSCREEN (FONDO) ========== -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <!-- ========== NAVBAR FLOTANTE SUPERIOR ========== -->
+        <nav class="top-navbar">
+            <!-- Hamburguesa para colapsar sidebar -->
+            <button id="sidebar-toggle" class="btn-icon" title="Mostrar/Ocultar panel">☰</button>
+
+            <!-- Logo SVG -->
+            <a href="index.html" class="navbar-brand">
+                <img src="assets/horizontal_compacto.svg" alt="Don Rutero" class="navbar-logo">
+            </a>
+
+            <!-- Spacer -->
+            <div style="flex: 1;"></div>
+
+            <!-- Acciones de usuario -->
+            <div class="navbar-actions">
+                <div id="user-badge" class="user-badge" style="display: none;"></div>
+                <button id="login-btn" class="btn btn-primary btn-login">
+                    <img src="assets/icons/ui_usuario.svg" alt="" class="btn-svg-icon"> Iniciar Sesión
+                </button>
+                <button id="admin-btn" class="btn btn-secondary btn-admin" style="display:none; align-items: center; gap: 6px;">
+                    <img src="assets/icons/ui_escudo.svg" alt="" style="width: 16px; height: 16px;"> Admin
+                </button>
+                <!-- Campana de notificaciones -->
+                <button class="btn-icon" id="btn-notificaciones" title="Notificaciones">
+                    <img src="assets/icons/ui_campana.svg" alt="Notificaciones" style="width:20px; height:20px;">
+                </button>
+            </div>
+        </nav>
+
+        <!-- ========== PANEL LATERAL FLOTANTE ========== -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-content">
+
+                <!-- Mode Switcher (Rutas vs Planear Viaje) -->
+                <div class="sidebar-mode-switcher">
+                    <button id="tab-rutas" class="mode-tab-btn active" onclick="switchSidebarMode('rutas')">
+                        <img src="assets/icons/ui_camion.svg" alt="" style="width: 15px; height: 15px; vertical-align: -2px;"> Ver Rutas
+                    </button>
+                    <button id="tab-planificador" class="mode-tab-btn" onclick="switchSidebarMode('planificador')">
+                        <img src="assets/icons/ui_ubicacion.svg" alt="" style="width: 15px; height: 15px; vertical-align: -2px;"> ¿Cómo Llego?
+                    </button>
+                </div>
+
+                <!-- === Sección principal (lista de rutas) === -->
+                <div id="main-list-section" style="display:flex; flex-direction:column; gap:12px;">
+
+                    <!-- 1. Buscador arriba (Mejor UX) -->
+                    <div class="search-container">
+                        <img src="assets/icons/ui_buscar.svg" alt="" class="search-icon-svg">
+                        <input type="text" id="search-input" class="search-input" placeholder="Buscar por nombre, colonia, destino..." autocomplete="off">
+                        <div id="search-suggestions" class="search-suggestions-dropdown"></div>
+                    </div>
+
+                    <!-- 2. Header de sección con Toggle de Lugares compacto -->
+                    <div class="section-header" style="margin-top:2px;">
+                        <span class="section-title">
+                            <img src="assets/icons/ui_camion.svg" alt="" style="width:16px; height:16px; vertical-align:-2px; margin-right:4px;">
+                            Rutas
+                        </span>
+                    </div>
+
+                    <!-- 3. Filtros Rápidos (una sola línea con scroll horizontal suave) -->
+                    <div class="filter-pills">
+                        <button class="pill active" data-filter="all">Todas</button>
+                        <button class="pill" data-filter="turistico"><img src="assets/icons/ui_turistico.svg" alt="" class="pill-icon-svg"> Turístico</button>
+                        <button class="pill" data-filter="centro"><img src="assets/icons/ui_centro.svg" alt="" class="pill-icon-svg"> Centro</button>
+                        <button class="pill" data-filter="frecuente"><img src="assets/icons/ui_frecuente.svg" alt="" class="pill-icon-svg"> Frecuentes</button>
+                    </div>
+
+                    <!-- Lista de Rutas -->
+                    <div id="route-list" class="route-list">
+                        <div style="text-align:center; color:var(--text-muted); font-size:0.88rem; padding:24px 0;">
+                            Cargando rutas...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- === Sección Planificador de Viajes "¿Cómo Llego?" === -->
+                <div id="trip-planner-section" style="display:none; flex-direction:column; gap:14px;">
+                    <div style="background: var(--bg-white, #ffffff); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06);">
+                        <h3 style="margin: 0 0 8px 0; font-size: 1rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                            <img src="assets/icons/ui_buscar.svg" alt="" style="width: 18px; height: 18px;"> Planificador Inteligente
+                        </h3>
+                        <p style="margin: 0 0 14px 0; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">
+                            Escribe tu colonia, lugar o <b>Código Postal (C.P.)</b> de origen y destino para encontrar qué camión te lleva directo en Mazatlán.
+                        </p>
+                        
+                        <!-- Origen Input -->
+                        <div style="position: relative; margin-bottom: 12px;">
+                            <label style="font-size: 0.75rem; font-weight: 800; color: #16a34a; display: flex; align-items: center; margin-bottom: 4px;">
+                                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#16a34a; margin-right:6px;"></span> ORIGEN (¿Desde dónde sales?)
+                            </label>
+                            <div style="position: relative;">
+                                <input type="text" id="origin-input" class="search-input" placeholder="Col. Juárez, 82180, UAS, Mi Ubicación..." autocomplete="off" style="padding-right: 38px; border-color: #16a34a44;">
+                                <button id="btn-use-mylocation" title="Usar mi ubicación actual GPS" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 2px;">
+                                    <img src="assets/icons/ui_ubicacion.svg" alt="" style="width:16px; height:16px;">
+                                </button>
+                            </div>
+                            <div id="origin-suggestions" class="search-suggestions-dropdown"></div>
+                        </div>
+                        
+                        <!-- Destino Input -->
+                        <div style="position: relative; margin-bottom: 16px;">
+                            <label style="font-size: 0.75rem; font-weight: 800; color: #dc2626; display: flex; align-items: center; margin-bottom: 4px;">
+                                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#dc2626; margin-right:6px;"></span> DESTINO (¿A dónde vas?)
+                            </label>
+                            <div style="position: relative;">
+                                <input type="text" id="destination-input" class="search-input" placeholder="Gran Acuario, Cerritos, 82110, Sharp..." autocomplete="off" style="border-color: #dc262644;">
+                            </div>
+                            <div id="destination-suggestions" class="search-suggestions-dropdown"></div>
+                        </div>
+                        
+                        <button id="btn-find-trip" onclick="calculateTripRoute()" class="btn-primary" style="width: 100%; padding: 12px; font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); border: none; border-radius: var(--radius-md); color: white; cursor: pointer;">
+                            <img src="assets/icons/ui_buscar.svg" alt="" style="width:16px; height:16px; filter:brightness(0) invert(1);"> Encontrar Mi Camión
+                        </button>
+                    </div>
+                    
+                    <div id="trip-results-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                </div>
+
+                <!-- === Detalle de ruta seleccionada === -->
+                <div id="detail-panel" class="detail-panel">
+                    <div class="detail-header">
+                        <h2 id="detail-title" class="detail-title">Nombre Ruta</h2>
+                        <button id="close-detail-btn" class="close-btn" title="Cerrar">
+                            <img src="assets/icons/ui_cerrar.svg" alt="Cerrar" style="width:14px; height:14px;">
+                        </button>
+                    </div>
+                    <p id="detail-desc" class="detail-desc"></p>
+                    <div id="detail-meta" class="route-meta" style="margin-bottom:4px;"></div>
+
+                    <div>
+                        <h3 class="section-title" style="margin-bottom:10px;">Recorrido</h3>
+                        <div id="detail-stops-timeline" class="stops-timeline"></div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- ========== FAB GEOLOCALIZACIÓN ========== -->
+        <button id="fab-location" class="fab-location" title="Mi ubicación">
+            <img src="assets/icons/ui_ubicacion.svg" alt="Mi ubicación" style="width:22px; height:22px;">
+        </button>
+
+    </div>
+
+    <!-- ========== MODALES ========== -->
+
+    <!-- Notifications Modal -->
+    <div id="notifications-modal" class="form-overlay" style="display:none;">
+        <div class="form-card auth-card-premium" style="max-width: 400px; padding: 24px;">
+            <button id="notifications-close" class="form-close">
+                <img src="assets/icons/ui_cerrar.svg" alt="Cerrar" style="width:14px; height:14px;">
+            </button>
+            <div class="auth-header" style="margin-bottom: 20px;">
+                <div class="auth-icon-badge badge-blue" style="background: #e0e7ff; color: #4338ca;">
+                    <img src="assets/icons/ui_campana.svg" alt="" style="filter: invert(24%) sepia(85%) saturate(3015%) hue-rotate(228deg) brightness(91%) contrast(98%);">
+                </div>
+                <h2>Notificaciones</h2>
+                <p class="auth-subtitle">Novedades y estado de rutas en Mazatlán</p>
+            </div>
+            
+            <div id="notifications-feed" style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+                <!-- Feed Item -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="background: #dcfce7; min-width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <img src="assets/icons/ui_camion.svg" alt="" style="width: 16px; filter: invert(41%) sepia(81%) saturate(464%) hue-rotate(85deg) brightness(93%) contrast(92%);">
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; font-size: 0.9rem; color: #1e293b; font-weight: 800;">Nuevas Rutas Añadidas</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: #475569; line-height: 1.4;">Se han integrado exitosamente rutas actualizadas de Águilas del Pacífico y Alianza.</p>
+                        <span style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px; display: block;">Hace 2 horas</span>
+                    </div>
+                </div>
+                
+                <!-- Feed Item -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="background: #fee2e2; min-width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <img src="assets/icons/ui_alerta_desvio.svg" alt="" style="width: 16px; filter: invert(27%) sepia(82%) saturate(2250%) hue-rotate(345deg) brightness(88%) contrast(93%);">
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; font-size: 0.9rem; color: #1e293b; font-weight: 800;">Desvío: Sábalo Centro</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: #475569; line-height: 1.4;">Debido a obras en la Av. del Mar, la ruta tomará por Av. Ejército Mexicano temporalmente.</p>
+                        <span style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px; display: block;">Ayer</span>
+                    </div>
+                </div>
+                
+                <!-- Feed Item -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="background: #fef9c3; min-width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <img src="assets/icons/ui_campana.svg" alt="" style="width: 16px; filter: invert(65%) sepia(74%) saturate(614%) hue-rotate(2deg) brightness(97%) contrast(96%);">
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; font-size: 0.9rem; color: #1e293b; font-weight: 800;">¡Bienvenidos a Don Rutero!</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: #475569; line-height: 1.4;">La plataforma ya cuenta con el nuevo planificador de viajes inteligente.</p>
+                        <span style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px; display: block;">Hace 3 días</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Settings Modal -->
+    <div id="account-modal" class="form-overlay" style="display:none;">
+        <div class="form-card auth-card-premium" style="max-width: 380px; padding: 24px;">
+            <button id="account-close" class="form-close">
+                <img src="assets/icons/ui_cerrar.svg" alt="Cerrar" style="width:14px; height:14px;">
+            </button>
+            <div class="auth-header" style="margin-bottom: 24px;">
+                <div class="auth-icon-badge badge-blue">
+                    <img src="assets/icons/ui_usuario.svg" alt="">
+                </div>
+                <h2 id="account-username">Mi Perfil</h2>
+                <p class="auth-subtitle">Gestiona tu cuenta de Don Rutero</p>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button class="btn btn-secondary" style="justify-content: flex-start; padding: 12px; font-size: 0.9rem;" onclick="showToast('Función Próximamente', 'info')">
+                    <img src="assets/icons/ui_correo.svg" alt="" style="width: 16px; margin-right: 8px;"> Cambiar Correo Electrónico
+                </button>
+                <button class="btn btn-secondary" style="justify-content: flex-start; padding: 12px; font-size: 0.9rem;" onclick="showToast('Función Próximamente', 'info')">
+                    <img src="assets/icons/ui_candado.svg" alt="" style="width: 16px; margin-right: 8px;"> Cambiar Contraseña
+                </button>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 8px 0;">
+                <button id="account-logout-btn" class="btn btn-primary" style="background: #ef4444; color: white; border: none; justify-content: center; padding: 12px; font-size: 0.9rem;">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal Premium -->
+    <div id="login-modal" class="form-overlay" style="display:none;">
+        <div class="form-card auth-card-premium">
+            <button id="login-close" class="form-close">
+                <img src="assets/icons/ui_cerrar.svg" alt="Cerrar" style="width:14px; height:14px;">
+            </button>
+            <div class="auth-header">
+                <div class="auth-icon-badge badge-blue">
+                    <img src="assets/icons/ui_usuario.svg" alt="">
+                </div>
+                <h2>Iniciar Sesión</h2>
+                <p class="auth-subtitle">Bienvenido de nuevo a Don Rutero</p>
+            </div>
+            
+            <div id="login-error-banner" class="auth-error-banner" style="display: none;">
+                <img src="assets/icons/ui_alerta_error.svg" alt="">
+                <span id="login-error-text">Error de validación</span>
+            </div>
+
+            <form id="login-form" style="display:flex; flex-direction:column; gap:16px;">
+                <div class="form-group">
+                    <label for="login-username">Usuario o Correo</label>
+                    <div class="input-icon-wrapper">
+                        <img src="assets/icons/ui_usuario.svg" class="input-icon" alt="">
+                        <input type="text" id="login-username" class="form-control input-with-icon" placeholder="Tu nombre de usuario" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Contraseña</label>
+                    <div class="input-icon-wrapper">
+                        <img src="assets/icons/ui_candado.svg" class="input-icon" alt="">
+                        <input type="password" id="login-password" class="form-control input-with-icon" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div style="text-align: right; margin-top: -6px;">
+                    <a href="#" id="open-forgot" class="auth-link-subtle">¿Olvidaste tu contraseña?</a>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px;">Entrar a mi cuenta</button>
+            </form>
+            <div class="form-footer">
+                ¿No tienes cuenta? <a href="#" id="open-register">Regístrate aquí</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MENÚ PRINCIPAL (DRAWER LATERAL ESTILO FIGMA) ========== -->
+    <div id="menu-backdrop" class="menu-backdrop"></div>
+    <aside id="main-menu-drawer" class="main-menu-drawer">
+        <!-- Header del menú -->
+        <div class="menu-header">
+            <div class="menu-title-group">
+                <div class="menu-logo-icon">
+                    <img src="assets/icons/ui_camion.svg" alt="" style="width:20px; height:20px; filter: brightness(0) invert(1);">
+                </div>
+                <span class="menu-title">Menú</span>
+            </div>
+            <button id="close-menu-btn" class="btn-icon-round" title="Cerrar menú">
+                <img src="assets/icons/ui_cerrar.svg" alt="Cerrar" style="width:16px; height:16px;">
+            </button>
+        </div>
+
+        <!-- Lista de opciones scrollable -->
+        <div class="menu-items-list">
+            <div class="menu-item" onclick="showMenuModal('sugerir')">
+                <div class="menu-item-icon">
+                    <img src="assets/icons/ui_alerta_desvio.svg" alt="">
+                </div>
+                <span class="menu-item-label">Reportar o Sugerir ruta</span>
+            </div>
+
+            <div class="menu-item" onclick="showMenuModal('guia_app')">
+                <div class="menu-item-icon">
+                    <img src="assets/icons/ui_buscar.svg" alt="">
+                </div>
+                <span class="menu-item-label">Cómo usar la app</span>
+            </div>
+
+            <div class="menu-item" onclick="showMenuModal('faq')">
+                <div class="menu-item-icon">
+                    <img src="assets/icons/ui_campana.svg" alt="">
+                </div>
+                <span class="menu-item-label">Preguntas frecuentes</span>
+            </div>
+
+            <div class="menu-item" onclick="showMenuModal('transporte_mzt')">
+                <div class="menu-item-icon">
+                    <img src="assets/icons/ui_camion.svg" alt="">
+                </div>
+                <span class="menu-item-label">Guía del transporte</span>
+            </div>
+
+            <div class="menu-item" onclick="showMenuModal('acerca')">
+                <div class="menu-item-icon">
+                    <img src="assets/icons/ui_ubicacion.svg" alt="">
+                </div>
+                <span class="menu-item-label">Acerca de Don Rutero</span>
+            </div>
+
+            <div class="menu-item" onclick="showMenuModal('legal')">
+                <div class="menu-item-icon">
+                    <img src="assets/icons/ui_filtro.svg" alt="">
+                </div>
+                <span class="menu-item-label">Avisos Legales</span>
+            </div>
+        </div>
+
+        <!-- Tarjeta inferior de Inicio de Sesión / Cuenta -->
+        <div class="menu-footer-section">
+            <div id="menu-auth-card" class="menu-auth-card">
+                <div class="menu-auth-icon">
+                    <img src="assets/icons/ui_usuario.svg" alt="" style="width:20px; height:20px;">
+                </div>
+                <div class="menu-auth-text">
+                    <div id="menu-auth-title" class="menu-auth-title">Iniciar sesión</div>
+                    <div id="menu-auth-subtitle" class="menu-auth-subtitle">Guarda tus favoritos y comenta</div>
+                </div>
+            </div>
+
+            <div class="menu-footer-version">
+                DON RUTERO - V1.0.0
+            </div>
+        </div>
+    </aside>
+
+    <!-- Modal de Información del Menú -->
+    <div id="info-modal" class="form-overlay" style="display:none;">
+        <div class="form-card" style="max-width: 440px;">
+            <button id="info-close" class="form-close">
+                <img src="assets/icons/ui_cerrar.svg" alt="Cerrar" style="width:14px; height:14px;">
+            </button>
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+                <div id="info-modal-icon" style="width:44px; height:44px; border-radius:12px; background:rgba(255,75,43,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <img src="assets/icons/ui_camion.svg" alt="" style="width:24px; height:24px;">
+                </div>
+                <h2 id="info-modal-title" style="font-family:var(--font-heading); font-size:1.25rem; font-weight:800; color:var(--text-primary); margin:0;">Título</h2>
+            </div>
+            <div id="info-modal-body" style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6; margin-bottom:20px; white-space:pre-line;">
+                Contenido
+            </div>
+            <button id="info-modal-btn" class="btn btn-primary" style="width:100%; background:var(--primary);">Entendido</button>
+        </div>
+    </div>
+
+    <!-- Modal de Reporte / Sugerencia -->
+    <div id="report-modal" class="form-overlay" style="display:none;">
+        <div class="form-card" style="max-width: 460px;">
+            <button id="report-close" class="form-close">
+                <img src="assets/icons/ui_cerrar.svg" alt="Cerrar" style="width:14px; height:14px;">
+            </button>
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+                <div style="width:44px; height:44px; border-radius:12px; background:rgba(255,75,43,0.12); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <img src="assets/icons/ui_alerta_desvio.svg" alt="" style="width:24px; height:24px;">
+                </div>
+                <div>
+                    <h2 style="font-family:var(--font-heading); font-size:1.25rem; font-weight:800; color:var(--text-primary); margin:0;">Reportar o Sugerir Ruta</h2>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Ayúdanos a mejorar el transporte en Mazatlán</div>
+                </div>
+            </div>
+            <form id="report-form" style="display:flex; flex-direction:column; gap:12px;">
+                <div class="form-group">
+                    <label for="report-type" style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">Tipo de aporte</label>
+                    <select id="report-type" class="form-control" style="cursor:pointer;" required>
+                        <option value="desvio">Reporte de Desvío u Obras en ruta</option>
+                        <option value="nueva_parada">Sugerir nueva Parada Oficial</option>
+                        <option value="falta_ruta">Falta una Ruta (Ej. Águilas del Pacífico)</option>
+                        <option value="correccion">Corregir Trayecto o Horario</option>
+                        <option value="general">Comentario o Sugerencia General</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="report-route" style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">Ruta / Colonia o Concesionario</label>
+                    <input type="text" id="report-route" class="form-control" placeholder="Ej. Alianza Cerritos, Águilas Chula Vista, Juárez..." required>
+                </div>
+                <div class="form-group">
+                    <label for="report-desc" style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">Descripción y Detalles</label>
+                    <textarea id="report-desc" class="form-control" rows="3" placeholder="Describe el cambio, por dónde está pasando el camión o tu sugerencia..." required style="resize:vertical;"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; background:var(--accent); margin-top:4px;">Enviar Reporte</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registro Modal Premium (2 Pasos) -->
+    <div id="register-modal" class="form-overlay" style="display:none;">
+        <div class="form-card auth-card-premium" style="max-width: 440px;">
+            <button id="register-close" class="form-close">
+                <img src="assets/icons/ui_cerrar.svg" alt="Cerrar" style="width:14px; height:14px;">
+            </button>
+            
+            <!-- PASO 1: Datos de Registro -->
+            <div id="register-step-1-form" style="display:flex; flex-direction:column; gap:20px;">
+                <div class="auth-header">
+                    <div class="auth-icon-badge badge-orange">
+                        <img src="assets/icons/ui_escudo.svg" alt="">
+                    </div>
+                    <h2>Crear Cuenta</h2>
+                    <p class="auth-subtitle">Únete a la comunidad de transporte en Mazatlán</p>
+                </div>
+
+                <div id="register-error-banner" class="auth-error-banner" style="display: none;">
+                    <img src="assets/icons/ui_alerta_error.svg" alt="">
+                    <span id="register-error-text">Error de validación</span>
+                </div>
+
+                <form id="register-form" style="display:flex; flex-direction:column; gap:16px;">
+                    <div class="form-group">
+                        <label for="register-email">Correo Electrónico</label>
+                        <div class="input-icon-wrapper">
+                            <img src="assets/icons/ui_correo.svg" class="input-icon" alt="">
+                            <input type="email" id="register-email" class="form-control input-with-icon" placeholder="ejemplo@correo.com" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-username">Nombre de Usuario</label>
+                        <div class="input-icon-wrapper">
+                            <img src="assets/icons/ui_usuario.svg" class="input-icon" alt="">
+                            <input type="text" id="register-username" class="form-control input-with-icon" placeholder="Ej. juan_perez (mínimo 3 letras)" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Contraseña</label>
+                        <div class="input-icon-wrapper">
+                            <img src="assets/icons/ui_candado.svg" class="input-icon" alt="">
+                            <input type="password" id="register-password" class="form-control input-with-icon" placeholder="Mínimo 6 caracteres" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm-password">Confirmar Contraseña</label>
+                        <div class="input-icon-wrapper">
+                            <img src="assets/icons/ui_candado_check.svg" class="input-icon" alt="">
+                            <input type="password" id="register-confirm-password" class="form-control input-with-icon" placeholder="Repite tu contraseña" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px;">Siguiente: Verificar Correo ➔</button>
+                </form>
+                <div class="form-footer" style="margin-top: 4px;">
+                    ¿Ya tienes cuenta? <a href="#" id="open-login">Inicia sesión</a>
+                </div>
+            </div>
+
+            <!-- PASO 2: Verificación de Código -->
+            <div id="register-step-2-code" style="display: none; flex-direction:column; gap:20px;">
+                <div class="auth-header">
+                    <div class="auth-icon-badge badge-cyan">
+                        <img src="assets/icons/ui_correo.svg" alt="">
+                    </div>
+                    <h2>Verificar Correo</h2>
+                    <p class="auth-subtitle">Hemos enviado un código de 6 dígitos a:<br><strong id="register-email-display" style="color: var(--primary-dark); font-size: 0.95rem;"></strong></p>
+                </div>
+
+                <div id="verify-error-banner" class="auth-error-banner" style="display: none;">
+                    <img src="assets/icons/ui_alerta_error.svg" alt="">
+                    <span id="verify-error-text">Código incorrecto</span>
+                </div>
+
+                <form id="verify-form" style="display:flex; flex-direction:column; gap:16px;">
+                    <div class="form-group" style="text-align: center;">
+                        <label for="register-code-input" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">Ingresa tu código de verificación:</label>
+                        <input type="text" id="register-code-input" class="form-control verification-input" placeholder="000000" maxlength="6" required autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px;">Verificar y Crear Cuenta</button>
+                </form>
+                <div class="form-footer" style="margin-top: 4px;">
+                    ¿No te llegó? <a href="#" id="resend-code-link">Reenviar código demo</a>
+                    <br><a href="#" id="back-to-step-1" style="font-size: 0.8rem; color: var(--text-muted); display: inline-block; margin-top: 6px;">⬅ Volver a corregir datos</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Recuperación de Contraseña Modal Premium ("¿Olvidaste tu contraseña?") -->
+    <div id="forgot-modal" class="form-overlay" style="display:none;">
+        <div class="form-card auth-card-premium">
+            <button id="forgot-close" class="form-close">
+                <img src="assets/icons/ui_cerrar.svg" alt="Cerrar" style="width:14px; height:14px;">
+            </button>
+            <div class="auth-header">
+                <div class="auth-icon-badge badge-cyan">
+                    <img src="assets/icons/ui_candado_check.svg" alt="">
+                </div>
+                <h2>Recuperar Contraseña</h2>
+                <p class="auth-subtitle">Te enviaremos un código de seguridad para restablecer tu acceso al instante.</p>
+            </div>
+
+            <div id="forgot-error-banner" class="auth-error-banner" style="display: none;">
+                <img src="assets/icons/ui_alerta_error.svg" alt="">
+                <span id="forgot-error-text">No existe la cuenta</span>
+            </div>
+            <div id="forgot-success-banner" class="auth-success-banner" style="display: none;">
+                <img src="assets/icons/ui_check.svg" alt="">
+                <span id="forgot-success-text">Enlace enviado con éxito</span>
+            </div>
+
+            <form id="forgot-form" style="display:flex; flex-direction:column; gap:16px;">
+                <div class="form-group">
+                    <label for="forgot-email">Correo Electrónico Registrado</label>
+                    <div class="input-icon-wrapper">
+                        <img src="assets/icons/ui_correo.svg" class="input-icon" alt="">
+                        <input type="email" id="forgot-email" class="form-control input-with-icon" placeholder="ejemplo@correo.com" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px;">Enviar Enlace de Recuperación</button>
+            </form>
+            <div class="form-footer">
+                <a href="#" id="forgot-back-login">⬅ Volver a Iniciar Sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Scripts -->
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

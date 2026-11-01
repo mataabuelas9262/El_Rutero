@@ -1,4 +1,4 @@
-# 🚍 Don Rutero — Rutas de Camiones y Transporte Público de Mazatlán
+# Don Rutero — Rutas de Camiones y Transporte Público de Mazatlán
 
 <div align="center">
 
@@ -16,16 +16,16 @@
 
 ---
 
-## 🌟 ¿Por qué nació Don Rutero?
+## ¿Por qué nació Don Rutero?
 En Mazatlán existen numerosas rutas de autobuses urbanos operadas por diversos concesionarios (como los **Camiones Verdes "Puro Sinaloa" de la Alianza** y las **Águilas del Pacífico**). Sin embargo, históricamente no ha existido una plataforma digital moderna, clara y accesible donde los ciudadanos locales y los turistas puedan ver el trayecto exacto calle por calle, identificar el sentido de la circulación en calles de doble sentido y conocer las paradas oficiales, tarifas y frecuencias.
 
 **Don Rutero** resuelve este problema ofreciendo una experiencia visual **estilo Figma / Glassmorphism** hiper-rápida, intuitiva y optimizada para cualquier dispositivo.
 
 ---
 
-## ✨ Características Principales
+## Características Principales
 
-### 🗺️ Para el Pasajero / Usuario
+### Para el Pasajero / Usuario
 * **Mapa Interactivo Fullscreen:** Desarrollado sobre *Leaflet.js* con capa base *CartoDB Positron*, haciendo que las polilíneas de colores de cada ruta resalten de manera clara y estética.
 * **Flechas Vectoriales Directrices de Alta Densidad:** Cada ruta incluye flechas indicadoras (`^` / `v`) integradas a lo largo de toda la polilínea (cada ~70 metros) para que el pasajero sepa al instante en qué dirección avanza el camión sin confusiones ni traslapes.
 * **Buscador Instantáneo y Filtros Rápidos:** Filtra en una sola línea por rutas *Turísticas* (Zona Dorada, Malecón, Cerritos), *Centro* (Mercado Pino Suárez, Olas Altas) o por *Frecuencia Alta* (<12 min).
@@ -34,7 +34,7 @@ En Mazatlán existen numerosas rutas de autobuses urbanos operadas por diversos 
 * **Sistema de Notificaciones y Avisos:** Panel de alertas sobre obras, desvíos temporales y nuevas rutas agregadas.
 * **Aporte Ciudadano (+ Sugerir Ruta):** Formulario integrado para que los usuarios reporten cambios, obras en la vía o sugieran rutas faltantes.
 
-### 🛠️ Para el Administrador (Studio GPS de Trazado)
+### Para el Administrador (Studio GPS de Trazado)
 * **Trazado Quirúrgico en el Mapa:** Dibuja recorridos haciendo clics directamente en las calles, garantizando que el camión pase exactamente por donde debe circular.
 * **Modificación de Geometrías Existentes:** Carga rutas de la base de datos de forma asíncrona para editar tramos específicos sin empezar desde cero.
 * **Herramientas de Importación y Exportación (JSON & SQL):** Compatible con coordenadas generadas por IA o herramientas externas para dibujar rutas instantáneamente.
@@ -43,7 +43,7 @@ En Mazatlán existen numerosas rutas de autobuses urbanos operadas por diversos 
 
 ---
 
-## 🛠️ Arquitectura y Tecnologías
+## Arquitectura y Tecnologías
 
 El proyecto sigue una arquitectura limpia basada en micro-capas **REST API (Backend)** + **Single Page Application (Frontend Vanilla)**:
 
@@ -58,7 +58,7 @@ El proyecto sigue una arquitectura limpia basada en micro-capas **REST API (Back
 
 ---
 
-## 🚀 Guía de Instalación y Ejecución Local
+## Guía de Instalación y Ejecución Local
 
 ### 1. Requisitos Previos
 * **Java Development Kit (JDK) 17** o superior instalado.
@@ -83,13 +83,13 @@ El servidor backend arrancará en **`http://localhost:8080`**.
 
 ### 4. Uso de la Aplicación
 Al iniciar el backend, Spring Boot servirá automáticamente la aplicación web desde la carpeta de recursos estáticos:
-* 👉 **Abre tu navegador en:** [http://localhost:8080](http://localhost:8080)
+* **Abre tu navegador en:** [http://localhost:8080](http://localhost:8080)
 
 > **Nota para desarrollo:** El frontend cuenta con detección dinámica de host en `api.js`. Si abres el archivo `frontend/index.html` directamente en tu navegador (`file://`) o usando la extensión *Live Server* de VS Code en los puertos `5500` o `3000`, la aplicación se conectará automáticamente a tu backend en `localhost:8080`. Cuando la publiques o la abras desde un celular conectado a tu red Wi-Fi (ej. `http://192.168.1.15:8080`), detectará la IP de forma automática sin romper los enlaces.
 
 ---
 
-## 🔑 Credenciales de Acceso (Demo)
+## Credenciales de Acceso (Demo)
 
 El script `schema.sql` incluye dos cuentas preconfiguradas para probar la aplicación inmediatamente:
 
@@ -98,14 +98,14 @@ El script `schema.sql` incluye dos cuentas preconfiguradas para probar la aplica
 | **Administrador** | `admin` | `admin123` | Acceso completo al Panel de Administración y Studio GPS de Trazado. |
 | **Usuario Normal** | `usuario` | `user123` | Consulta de rutas, guardado en favoritos y reporte de sugerencias. |
 
-> **Tip Pro:** Al registrar una cuenta nueva en la app, si utilizas un correo electrónico terminando en `@rutabus.com`, `@admin.com` o `@mazatlan.gob.mx`, el sistema te asignará automáticamente privilegios de Administrador.
+> **Nota:** Al registrar una cuenta nueva en la app, si utilizas un correo electrónico terminando en `@rutabus.com`, `@admin.com` o `@mazatlan.gob.mx`, el sistema te asignará automáticamente privilegios de Administrador.
 
 ---
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```text
-Ruta_Bus/
+El_Rutero/
 ├── backend/                       # Servidor Spring Boot (API RESTful)
 │   ├── src/main/java/com/rutabus/
 │   │   ├── config/                # Configuración de Seguridad (CORS, JWT Filter) y Datos
@@ -129,12 +129,12 @@ Ruta_Bus/
 
 ---
 
-## 🏖️ Sobre Mazatlán y el Transporte Urbano
+## Sobre Mazatlán y el Transporte Urbano
 Este proyecto está dedicado a mejorar la movilidad en el municipio de Mazatlán, Sinaloa. Cubre arterias principales como la **Avenida Ejército Mexicano**, el **Malecón (Av. del Mar)**, la **Zona Dorada (Av. Camarón Sábalo)**, **Playa Cerritos**, el **Centro Histórico**, **Mercado Pino Suárez** y zonas periféricas como **El Conchi**, **Alarcón**, **Prados del Sol** y **Chula Vista**.
 
 ---
 
 <div align="center">
-  <p>Hecho con ❤️ para la comunidad de Mazatlán, Sinaloa.</p>
+  <p>Hecho para la comunidad de Mazatlán, Sinaloa.</p>
   <p><b>© 2026 Don Rutero</b></p>
 </div>
